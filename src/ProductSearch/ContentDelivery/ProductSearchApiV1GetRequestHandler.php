@@ -125,7 +125,16 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
             throw new UnableToProcessProductSearchRequestException('Invalid product search API request.');
         }
 
+        // default search criteria (will cut the query in multiple array values)
         $searchCriteria = $this->createSearchCriteria($request);
+
+        // check if only one search criteria with the query-text is needed
+        $queryString = $request->getQueryParameter(self::QUERY_PARAMETER);
+        $containsQuotationsMarks = $this->isQuotationMarksSet($queryString);
+        if ($containsQuotationsMarks) {
+            $searchCriteria = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
+        }
+
         $queryOptions = $this->createQueryOptions($request);
         $snippetName = $this->getSnippetName($request);
 
@@ -135,6 +144,16 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
         $headers = [];
 
         return GenericHttpResponse::create($body, $headers, HttpResponse::STATUS_OK);
+    }
+
+    /**
+     * @param string $query
+     * @return bool
+     */
+    private function isQuotationMarksSet(string $query): bool
+    {
+        preg_match('/(%22(.*)%22|"(.*)")/', $query, $output);
+        return false === empty($output);
     }
 
     /**

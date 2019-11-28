@@ -38,4 +38,13 @@ class DefaultFullTextCriteriaBuilder implements FullTextCriteriaBuilder
 
         return CompositeSearchCriterion::create($this->fullTextSearchTermCombinationOperator, ...$criteria);
     }
+
+    public function createOneCriteriaFromString(string $queryString): SearchCriteria
+    {
+        if (trim($queryString) === '') {
+            throw new EmptyQueryStringException('Query string must not be empty.');
+        }
+
+        return new SearchCriterionFullText($queryString);
+    }
 }

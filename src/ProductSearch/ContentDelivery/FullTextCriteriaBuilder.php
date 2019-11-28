@@ -9,4 +9,6 @@ use LizardsAndPumpkins\DataPool\SearchEngine\SearchCriteria\SearchCriteria;
 interface FullTextCriteriaBuilder
 {
     public function createFromString(string $queryString): SearchCriteria;
+
+    public function createOneCriteriaFromString(string $queryString): SearchCriteria;
 }
