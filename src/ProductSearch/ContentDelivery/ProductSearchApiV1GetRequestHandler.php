@@ -127,13 +127,8 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
 
         // default search criteria (will cut the query in multiple array values)
         $searchCriteria = $this->createSearchCriteria($request);
-
         // check if only one search criteria with the query-text is needed
-        $queryString = $request->getQueryParameter(self::QUERY_PARAMETER);
-        $containsQuotationsMarks = $this->isQuotationMarksSet($queryString);
-        if ($containsQuotationsMarks) {
-            $searchCriteria = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
-        }
+        $searchCriteria = $this->createOneSearchCriteria($request, $searchCriteria);
 
         $queryOptions = $this->createQueryOptions($request);
         $snippetName = $this->getSnippetName($request);
@@ -248,6 +243,22 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
                 $rowsPerPage
             ));
         }
+    }
+
+    private function createOneSearchCriteria(
+        HttpRequest $request,
+        SearchCriteria $searchCriteria
+    ): SearchCriteria {
+        if ($request->hasQueryParameter(self::QUERY_PARAMETER)) {
+            // check if only one search criteria with the query-text is needed
+            $queryString = $request->getQueryParameter(self::QUERY_PARAMETER);
+            $containsQuotationsMarks = $this->isQuotationMarksSet($queryString);
+            if ($containsQuotationsMarks) {
+                $searchCriteria = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
+            }
+        }
+
+        return $searchCriteria;
     }
 
     private function createSearchCriteria(HttpRequest $request): SearchCriteria
