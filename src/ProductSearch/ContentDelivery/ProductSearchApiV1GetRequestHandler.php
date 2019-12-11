@@ -80,6 +80,16 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
      */
     private $urlToWebsiteMap;
 
+    /**
+     * @var SearchCriteria
+     */
+    private $queryFromString;
+
+    /**
+     * @var SearchCriteria
+     */
+    private $criteriaFromString;
+
     public function __construct(
         ProductSearchService $productSearchService,
         ContextBuilder $contextBuilder,
@@ -128,7 +138,7 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
         // default search criteria (will cut the query in multiple array values)
         $searchCriteria = $this->createSearchCriteria($request, 'one');
 
-        $queryOptions = $this->createQueryOptions($request);
+        $queryOptions = $this->createQueryOptions($request, $this->queryFromString, $this->criteriaFromString);
         $snippetName = $this->getSnippetName($request);
 
         $searchResult = $this->productSearchService->query($searchCriteria, $queryOptions, $snippetName);
@@ -148,8 +158,11 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
         return explode('/', $this->urlToWebsiteMap->getRequestPathWithoutWebsitePrefix((string) $request->getUrl()));
     }
 
-    private function createQueryOptions(HttpRequest $request): QueryOptions
-    {
+    private function createQueryOptions(
+        HttpRequest $request,
+        $queryFromString,
+        $criteriaFromString
+    ): QueryOptions {
         $filterSelection = $this->getSelectedFilters($request);
 
         $context = $this->contextBuilder->createFromRequest($request);
@@ -170,7 +183,9 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
             $facetFiltersToIncludeInResult,
             $rowsPerPage,
             $pageNumber,
-            $sortBy
+            $sortBy,
+            $queryFromString,
+            $criteriaFromString
         );
     }
 
@@ -246,6 +261,8 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
             $createFromString = $this->fullTextCriteriaBuilder->createFromString($queryString);
             if ($queryMode === 'one') {
                 $createFromString = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
+                $this->queryFromString = $createFromString;
+                $this->criteriaFromString = $this->criteriaParser->createCriteriaFromString($criteriaString);
             }
 
             return CompositeSearchCriterion::createAnd(
@@ -259,13 +276,20 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
             $createFromString = $this->fullTextCriteriaBuilder->createFromString($queryString);
             if ($queryMode === 'one') {
                 $createFromString = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
+                $this->queryFromString = $createFromString;
             }
+
             return $createFromString;
         }
 
         if ($request->hasQueryParameter(self::INITIAL_CRITERIA_PARAMETER)) {
             $criteriaString = $request->getQueryParameter(self::INITIAL_CRITERIA_PARAMETER);
-            return $this->criteriaParser->createCriteriaFromString($criteriaString);
+            $criteriaFromString = $this->criteriaParser->createCriteriaFromString($criteriaString);
+            if ($queryMode === 'one') {
+                $this->criteriaFromString = $criteriaFromString;
+            }
+
+            return $criteriaFromString;
         }
 
         return new SearchCriterionAnything();

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace LizardsAndPumpkins\ProductSearch;
 
+use LizardsAndPumpkins\Context\Context;
 use LizardsAndPumpkins\DataPool\SearchEngine\FacetFiltersToIncludeInResult;
 use LizardsAndPumpkins\DataPool\SearchEngine\Query\SortBy;
-use LizardsAndPumpkins\Context\Context;
+use LizardsAndPumpkins\DataPool\SearchEngine\SearchCriteria\SearchCriteria;
 use LizardsAndPumpkins\ProductSearch\Exception\InvalidNumberOfProductsPerPageException;
 
 class QueryOptions
@@ -42,12 +43,24 @@ class QueryOptions
     private $sortBy;
 
     /**
+     * @var null|SearchCriteria
+     */
+    private $queryFromString;
+
+    /**
+     * @var null|SearchCriteria
+     */
+    private $criteriaFromString;
+
+    /**
      * @param array[] $filterSelection
      * @param Context $context
      * @param FacetFiltersToIncludeInResult $facetFiltersToIncludeInResult
      * @param int $rowsPerPage
      * @param int $pageNumber
      * @param SortBy $sortBy
+     * @param $queryFromString
+     * @param $criteriaFromString
      */
     private function __construct(
         array $filterSelection,
@@ -55,7 +68,9 @@ class QueryOptions
         FacetFiltersToIncludeInResult $facetFiltersToIncludeInResult,
         int $rowsPerPage,
         int $pageNumber,
-        SortBy $sortBy
+        SortBy $sortBy,
+        $queryFromString,
+        $criteriaFromString
     ) {
         $this->filterSelection = $filterSelection;
         $this->context = $context;
@@ -63,6 +78,8 @@ class QueryOptions
         $this->rowsPerPage = $rowsPerPage;
         $this->pageNumber = $pageNumber;
         $this->sortBy = $sortBy;
+        $this->queryFromString = $queryFromString;
+        $this->criteriaFromString = $criteriaFromString;
     }
 
     /**
@@ -72,6 +89,8 @@ class QueryOptions
      * @param int $rowsPerPage
      * @param int $pageNumber
      * @param SortBy $sortBy
+     * @param $queryFromString
+     * @param $criteriaFromString
      * @return QueryOptions
      */
     public static function create(
@@ -80,7 +99,9 @@ class QueryOptions
         FacetFiltersToIncludeInResult $facetFiltersToIncludeInResult,
         int $rowsPerPage,
         int $pageNumber,
-        SortBy $sortBy
+        SortBy $sortBy,
+        $queryFromString,
+        $criteriaFromString
     ) {
         self::validateRowsPerPage($rowsPerPage);
         self::validatePageNumber($pageNumber);
@@ -91,8 +112,60 @@ class QueryOptions
             $facetFiltersToIncludeInResult,
             $rowsPerPage,
             $pageNumber,
-            $sortBy
+            $sortBy,
+            $queryFromString,
+            $criteriaFromString
         );
+    }
+
+    private static function validateRowsPerPage(int $rowsPerPage)
+    {
+        if ($rowsPerPage <= 0) {
+            throw new InvalidNumberOfProductsPerPageException(
+                sprintf('Number of rows per page must be positive, got "%s".', $rowsPerPage)
+            );
+        }
+    }
+
+    private static function validatePageNumber(int $pageNumber)
+    {
+        if ($pageNumber < 0) {
+            throw new InvalidNumberOfProductsPerPageException(
+                sprintf('Current page number can not be negative, got "%s".', $pageNumber)
+            );
+        }
+    }
+
+    /**
+     * @return SearchCriteria|null
+     */
+    public function getQueryFromString(): ?SearchCriteria
+    {
+        return $this->queryFromString;
+    }
+
+    /**
+     * @param SearchCriteria $queryFromString
+     */
+    public function setQueryFromString(SearchCriteria $queryFromString)
+    {
+        $this->queryFromString = $queryFromString;
+    }
+
+    /**
+     * @return SearchCriteria|null
+     */
+    public function getCriteriaFromString(): ?SearchCriteria
+    {
+        return $this->criteriaFromString;
+    }
+
+    /**
+     * @param SearchCriteria $criteriaFromString
+     */
+    public function setCriteriaFromString(SearchCriteria $criteriaFromString)
+    {
+        $this->criteriaFromString = $criteriaFromString;
     }
 
     /**
@@ -126,23 +199,5 @@ class QueryOptions
     public function getSortBy() : SortBy
     {
         return $this->sortBy;
-    }
-
-    private static function validateRowsPerPage(int $rowsPerPage)
-    {
-        if ($rowsPerPage <= 0) {
-            throw new InvalidNumberOfProductsPerPageException(
-                sprintf('Number of rows per page must be positive, got "%s".', $rowsPerPage)
-            );
-        }
-    }
-
-    private static function validatePageNumber(int $pageNumber)
-    {
-        if ($pageNumber < 0) {
-            throw new InvalidNumberOfProductsPerPageException(
-                sprintf('Current page number can not be negative, got "%s".', $pageNumber)
-            );
-        }
     }
 }
