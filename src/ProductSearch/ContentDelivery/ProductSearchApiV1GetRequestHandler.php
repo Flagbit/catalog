@@ -126,9 +126,7 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
         }
 
         // default search criteria (will cut the query in multiple array values)
-        $searchCriteria = $this->createSearchCriteria($request);
-        // check if only one search criteria with the query-text is needed
-        $searchCriteria = $this->createOneSearchCriteria($request, $searchCriteria);
+        $searchCriteria = $this->createSearchCriteria($request, 'one');
 
         $queryOptions = $this->createQueryOptions($request);
         $snippetName = $this->getSnippetName($request);
@@ -139,16 +137,6 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
         $headers = [];
 
         return GenericHttpResponse::create($body, $headers, HttpResponse::STATUS_OK);
-    }
-
-    /**
-     * @param string $query
-     * @return bool
-     */
-    private function isQuotationMarksSet(string $query): bool
-    {
-        preg_match('/(%22(.*)%22|"(.*)")/', $query, $output);
-        return false === empty($output);
     }
 
     /**
@@ -245,39 +233,34 @@ class ProductSearchApiV1GetRequestHandler implements HttpRequestHandler
         }
     }
 
-    private function createOneSearchCriteria(
+    private function createSearchCriteria(
         HttpRequest $request,
-        SearchCriteria $searchCriteria
+        $queryMode = 'multiple'
     ): SearchCriteria {
-        if ($request->hasQueryParameter(self::QUERY_PARAMETER)) {
-            // check if only one search criteria with the query-text is needed
-            $queryString = $request->getQueryParameter(self::QUERY_PARAMETER);
-            $containsQuotationsMarks = $this->isQuotationMarksSet($queryString);
-            if ($containsQuotationsMarks) {
-                $searchCriteria = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
-            }
-        }
-
-        return $searchCriteria;
-    }
-
-    private function createSearchCriteria(HttpRequest $request): SearchCriteria
-    {
         if ($request->hasQueryParameter(self::QUERY_PARAMETER) &&
             $request->hasQueryParameter(self::INITIAL_CRITERIA_PARAMETER)
         ) {
             $queryString = $request->getQueryParameter(self::QUERY_PARAMETER);
             $criteriaString = $request->getQueryParameter(self::INITIAL_CRITERIA_PARAMETER);
 
+            $createFromString = $this->fullTextCriteriaBuilder->createFromString($queryString);
+            if ($queryMode === 'one') {
+                $createFromString = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
+            }
+
             return CompositeSearchCriterion::createAnd(
-                $this->fullTextCriteriaBuilder->createFromString($queryString),
+                $createFromString,
                 $this->criteriaParser->createCriteriaFromString($criteriaString)
             );
         }
 
         if ($request->hasQueryParameter(self::QUERY_PARAMETER)) {
             $queryString = $request->getQueryParameter(self::QUERY_PARAMETER);
-            return $this->fullTextCriteriaBuilder->createFromString($queryString);
+            $createFromString = $this->fullTextCriteriaBuilder->createFromString($queryString);
+            if ($queryMode === 'one') {
+                $createFromString = $this->fullTextCriteriaBuilder->createOneCriteriaFromString($queryString);
+            }
+            return $createFromString;
         }
 
         if ($request->hasQueryParameter(self::INITIAL_CRITERIA_PARAMETER)) {
